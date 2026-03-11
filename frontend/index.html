@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VizQA — Visual QA Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<style>
+  :root {
+    --bg-0: #0c0c0e;
+    --bg-1: #141418;
+    --bg-2: #1c1c22;
+    --bg-3: #26262e;
+    --border: #2e2e38;
+    --border-hover: #3e3e4a;
+    --text-0: #f0f0f4;
+    --text-1: #b0b0bc;
+    --text-2: #707080;
+    --accent: #7c6aef;
+    --accent-dim: #7c6aef22;
+    --accent-hover: #8d7df7;
+    --green: #34d399;
+    --green-dim: #34d39918;
+    --red: #f87171;
+    --red-dim: #f8717118;
+    --orange: #fbbf24;
+    --orange-dim: #fbbf2418;
+    --blue: #60a5fa;
+    --blue-dim: #60a5fa18;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'DM Sans', -apple-system, sans-serif;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-0);
+    color: var(--text-0);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 3px; }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  @keyframes pulse-border {
+    0%, 100% { border-color: var(--border); }
+    50% { border-color: var(--accent); }
+  }
+  .fade-up { animation: fadeUp 0.4s ease-out both; }
+  .stagger-1 { animation-delay: 0.05s; }
+  .stagger-2 { animation-delay: 0.1s; }
+  .stagger-3 { animation-delay: 0.15s; }
+  .stagger-4 { animation-delay: 0.2s; }
+
+  /* Layout */
+  .app-shell {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 40px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .logo {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 16px; color: white;
+    font-family: var(--mono);
+  }
+  .header h1 {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .header h1 span { color: var(--text-2); font-weight: 400; }
+  .step-indicator {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 12px; color: var(--text-2);
+  }
+  .step-dot {
+    width: 24px; height: 24px; border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600;
+    transition: all 0.3s;
+  }
+  .step-dot.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+  .step-dot.done { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+  .step-line { width: 20px; height: 2px; background: var(--border); }
+  .step-line.done { background: var(--green); }
+
+  /* Input form */
+  .form-card {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+  .form-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-1);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .form-input, .form-textarea {
+    background: var(--bg-0);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    color: var(--text-0);
+    font-family: var(--mono);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus, .form-textarea:focus { border-color: var(--accent); }
+  .form-input::placeholder, .form-textarea::placeholder { color: var(--text-2); }
+  .form-textarea { resize: vertical; min-height: 70px; font-family: var(--sans); }
+
+  /* Viewport chips */
+  .viewport-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    padding: 6px 14px;
+    border: 1px solid var(--bg-3);
+    border-radius: 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-1);
+    background: var(--bg-2);
+    user-select: none;
+  }
+  .chip:hover { border-color: var(--border-hover); background: var(--bg-3); }
+  .chip.selected { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+  /* Buttons */
+  .btn {
+    padding: 10px 24px;
+    border-radius: var(--radius-sm);
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    color: white;
+    box-shadow: 0 0 16px var(--accent-dim);
+  }
+  .btn-primary:hover { background: linear-gradient(135deg, var(--accent-hover), #b89dff); box-shadow: 0 0 24px #7c6aef44; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-secondary {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--text-1);
+  }
+  .btn-secondary:hover { border-color: var(--border-hover); color: var(--text-0); }
+  .btn-green { background: var(--green); color: var(--bg-0); }
+  .btn-green:hover { filter: brightness(1.1); }
+  .btn-sm { padding: 6px 14px; font-size: 11px; }
+  .btn-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+  /* Screenshots grid */
+  .screenshots-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .screenshot-card {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .screenshot-card img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-bottom: 1px solid var(--border);
+  }
+  .screenshot-meta {
+    padding: 10px 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-2);
+    display: flex; justify-content: space-between;
+  }
+
+  /* Edit cards */
+  .edits-section { margin-top: 32px; }
+  .edits-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .edits-header h2 {
+    font-size: 16px;
+    font-family: var(--mono);
+    font-weight: 600;
+  }
+  .edits-stats {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-2);
+    display: flex; gap: 16px;
+  }
+  .edits-stats .stat-accepted { color: var(--green); }
+  .edits-stats .stat-rejected { color: var(--red); }
+
+  .edit-card {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 12px;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .edit-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    border-radius: 3px 0 0 3px;
+  }
+  .edit-card.priority-critical::before { background: var(--red); }
+  .edit-card.priority-important::before { background: var(--orange); }
+  .edit-card.priority-nice-to-have::before { background: var(--blue); }
+
+  .edit-card.accepted { border-color: var(--green); background: #34d39908; }
+  .edit-card.rejected { opacity: 0.35; }
+
+  .edit-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .edit-card-info { flex: 1; }
+  .edit-card-badges { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+  .badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .badge-critical { background: var(--red-dim); color: var(--red); }
+  .badge-important { background: var(--orange-dim); color: var(--orange); }
+  .badge-nice-to-have { background: var(--blue-dim); color: var(--blue); }
+  .badge-category { background: var(--bg-3); color: var(--text-1); }
+
+  .edit-title { font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+  .edit-desc { font-size: 13px; color: var(--text-1); line-height: 1.5; margin-bottom: 8px; }
+  .edit-fix {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--green);
+    background: var(--green-dim);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    line-height: 1.5;
+    margin-bottom: 6px;
+  }
+  .edit-location {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-2);
+  }
+
+  .edit-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .action-btn {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-2);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    transition: all 0.2s;
+  }
+  .action-btn.accept:hover, .action-btn.accept.active { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+  .action-btn.reject:hover, .action-btn.reject.active { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+
+  /* Prompt output */
+  .prompt-output {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-top: 24px;
+    overflow: hidden;
+  }
+  .prompt-output-header {
+    padding: 14px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-2);
+  }
+  .prompt-output-header h3 {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .prompt-output-body {
+    padding: 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text-1);
+    white-space: pre-wrap;
+    max-height: 500px;
+    overflow-y: auto;
+  }
+
+  /* Loading state */
+  .loading-bar {
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 2px;
+    margin: 20px 0;
+  }
+  .loading-text {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-2);
+    text-align: center;
+    margin-top: 8px;
+  }
+
+  /* Toast / copied */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--green);
+    color: var(--bg-0);
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s;
+    pointer-events: none;
+    z-index: 100;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* Bulk actions */
+  .bulk-actions {
+    display: flex; gap: 8px; margin-bottom: 16px;
+  }
+
+  /* Flow editor */
+  .flow-editor {
+    background: var(--bg-0);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-1);
+    width: 100%;
+    min-height: 100px;
+    resize: vertical;
+    outline: none;
+  }
+  .flow-editor:focus { border-color: var(--accent); }
+
+  .section-title {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-2);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .error-msg {
+    background: var(--red-dim);
+    border: 1px solid var(--red);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    color: var(--red);
+    font-family: var(--mono);
+    font-size: 12px;
+    margin: 12px 0;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useCallback, useRef, useEffect } = React;
+
+const API = "http://localhost:8899";
+
+// ─── Icons (inline SVG) ─────────────────────────────────────────────
+const CheckIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
+const XIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+const CopyIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>;
+const CameraIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>;
+const SparkleIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
+
+// ─── Toast ──────────────────────────────────────────────────────────
+function Toast({ message, show }) {
+  return <div className={`toast ${show ? 'show' : ''}`}>{message}</div>;
+}
+
+// ─── Main App ───────────────────────────────────────────────────────
+function App() {
+  // Step: 0=config, 1=screenshots, 2=review, 3=compile
+  const [step, setStep] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [loadingMsg, setLoadingMsg] = useState("");
+  const [error, setError] = useState("");
+  const [toast, setToast] = useState({ show: false, message: "" });
+
+  // Form state
+  const [url, setUrl] = useState("http://localhost:3000");
+  const [description, setDescription] = useState("");
+  const [techStack, setTechStack] = useState("");
+  const [viewports, setViewports] = useState(["desktop"]);
+  const [flowJson, setFlowJson] = useState("");
+
+  // Data
+  const [screenshots, setScreenshots] = useState([]);
+  const [edits, setEdits] = useState([]);      // [{...edit, status: 'pending'|'accepted'|'rejected'}]
+  const [rawReview, setRawReview] = useState("");
+  const [compiledPrompt, setCompiledPrompt] = useState("");
+
+  const showToast = (msg) => {
+    setToast({ show: true, message: msg });
+    setTimeout(() => setToast({ show: false, message: "" }), 2000);
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    showToast("Copied to clipboard!");
+  };
+
+  // ─── Step 1: Capture ───────────────────────────────────────────
+  const handleCapture = async () => {
+    setError("");
+    setLoading(true);
+    setLoadingMsg("Launching browser & capturing screenshots...");
+
+    try {
+      let flow = null;
+      if (flowJson.trim()) {
+        try {
+          flow = JSON.parse(flowJson);
+        } catch (e) {
+          setError("Invalid JSON in flow editor: " + e.message);
+          setLoading(false);
+          return;
+        }
+      }
+
+      const res = await fetch(`${API}/api/capture`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, description, tech_stack: techStack, viewports, flow }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.detail || "Capture failed");
+      }
+
+      const data = await res.json();
+      setScreenshots(data.screenshots);
+      setStep(1);
+
+      // Auto-start review
+      await handleReview(data.screenshots);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ─── Step 2: Review ────────────────────────────────────────────
+  const handleReview = async (screenshotData) => {
+    setLoading(true);
+    setLoadingMsg("Sending screenshots to Gemini for visual analysis...");
+
+    try {
+      const screenshotsForApi = (screenshotData || screenshots).map(s => ({
+        path: s.path,
+        viewport: s.viewport,
+        step: s.step,
+      }));
+
+      const res = await fetch(`${API}/api/review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          screenshots: screenshotsForApi,
+          description,
+          tech_stack: techStack,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.detail || "Review failed");
+      }
+
+      const data = await res.json();
+      setEdits(data.edits.map((e, i) => ({ ...e, id: e.id || String(i + 1), status: "pending" })));
+      setRawReview(data.raw_review);
+      setStep(2);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ─── Step 3: Compile ──────────────────────────────────────────
+  const handleCompile = async () => {
+    setLoading(true);
+    setLoadingMsg("Compiling accepted edits into Claude Code prompt...");
+    setError("");
+
+    try {
+      const accepted = edits.filter(e => e.status === "accepted");
+      if (accepted.length === 0) {
+        setError("No edits accepted. Accept at least one edit to compile.");
+        setLoading(false);
+        return;
+      }
+
+      const res = await fetch(`${API}/api/compile`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accepted_edits: accepted,
+          description,
+          tech_stack: techStack,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.detail || "Compile failed");
+      }
+
+      const data = await res.json();
+      setCompiledPrompt(data.prompt);
+      setStep(3);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Edit actions
+  const setEditStatus = (id, status) => {
+    setEdits(prev => prev.map(e => e.id === id ? { ...e, status } : e));
+  };
+  const bulkAction = (status) => {
+    setEdits(prev => prev.map(e => ({ ...e, status })));
+  };
+
+  const toggleViewport = (vp) => {
+    setViewports(prev =>
+      prev.includes(vp) ? prev.filter(v => v !== vp) : [...prev, vp]
+    );
+  };
+
+  const acceptedCount = edits.filter(e => e.status === "accepted").length;
+  const rejectedCount = edits.filter(e => e.status === "rejected").length;
+  const pendingCount = edits.filter(e => e.status === "pending").length;
+
+  const currentStep = step;
+
+  return (
+    <div className="app-shell">
+      {/* Header */}
+      <div className="header fade-up">
+        <div className="header-left">
+          <div className="logo">V</div>
+          <h1>VizQA <span>/ visual qa agent</span></h1>
+        </div>
+        <div className="step-indicator">
+          <div className={`step-dot ${currentStep === 0 ? 'active' : currentStep > 0 ? 'done' : ''}`}>1</div>
+          <div className={`step-line ${currentStep > 0 ? 'done' : ''}`}/>
+          <div className={`step-dot ${currentStep === 1 || currentStep === 2 ? 'active' : currentStep > 2 ? 'done' : ''}`}>2</div>
+          <div className={`step-line ${currentStep > 2 ? 'done' : ''}`}/>
+          <div className={`step-dot ${currentStep === 3 ? 'active' : ''}`}>3</div>
+        </div>
+      </div>
+
+      {error && <div className="error-msg fade-up">{error}</div>}
+
+      {/* Step 0: Config */}
+      {currentStep === 0 && !loading && (
+        <div className="form-card fade-up">
+          <div className="form-grid">
+            <div className="form-group">
+              <label className="form-label">Target URL</label>
+              <input className="form-input" value={url} onChange={e => setUrl(e.target.value)} placeholder="http://localhost:3000" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Tech Stack</label>
+              <input className="form-input" value={techStack} onChange={e => setTechStack(e.target.value)} placeholder="React + Tailwind + Next.js" />
+            </div>
+            <div className="form-group full">
+              <label className="form-label">What did you build / change?</label>
+              <textarea className="form-textarea" value={description} onChange={e => setDescription(e.target.value)} placeholder="Added a new settings page with profile editing, password change, and notification preferences..." />
+            </div>
+            <div className="form-group full">
+              <label className="form-label">Viewports</label>
+              <div className="viewport-chips">
+                {["desktop", "tablet", "mobile"].map(vp => (
+                  <div key={vp} className={`chip ${viewports.includes(vp) ? 'selected' : ''}`} onClick={() => toggleViewport(vp)}>
+                    {vp === "desktop" ? "🖥 Desktop" : vp === "tablet" ? "📱 Tablet" : "📲 Mobile"}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="form-group full">
+              <label className="form-label">Test Flow (optional JSON)</label>
+              <textarea className="flow-editor" value={flowJson} onChange={e => setFlowJson(e.target.value)}
+                placeholder={`[\n  {"name": "click_login", "action": "click", "selector": "text=Log in"},\n  {"name": "fill_user", "action": "fill", "selector": "input[placeholder=\\'username\\']", "value": "admin"}\n]`} />
+            </div>
+          </div>
+          <div className="btn-row">
+            <button className="btn btn-primary" onClick={handleCapture} disabled={!url || !description}>
+              <CameraIcon /> Capture & Review
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Loading */}
+      {loading && (
+        <div className="fade-up" style={{ marginTop: 32 }}>
+          <div className="loading-bar" />
+          <p className="loading-text">{loadingMsg}</p>
+        </div>
+      )}
+
+      {/* Step 1-2: Screenshots + Edits */}
+      {currentStep >= 1 && !loading && (
+        <div>
+          {/* Screenshots */}
+          <div className="section-title fade-up">Screenshots</div>
+          <div className="screenshots-grid">
+            {screenshots.map((s, i) => (
+              <div key={i} className={`screenshot-card fade-up stagger-${(i % 4) + 1}`}>
+                <img src={`data:image/png;base64,${s.image_b64}`} alt={`${s.viewport} ${s.step}`} />
+                <div className="screenshot-meta">
+                  <span>{s.viewport}</span>
+                  <span>{s.step}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {currentStep >= 2 && !loading && (
+        <div className="edits-section fade-up">
+          <div className="edits-header">
+            <h2>Edit Suggestions ({edits.length})</h2>
+            <div className="edits-stats">
+              <span className="stat-accepted">✓ {acceptedCount} accepted</span>
+              <span className="stat-rejected">✕ {rejectedCount} rejected</span>
+              <span>{pendingCount} pending</span>
+            </div>
+          </div>
+
+          <div className="bulk-actions">
+            <button className="btn btn-secondary btn-sm" onClick={() => bulkAction("accepted")}>Accept All</button>
+            <button className="btn btn-secondary btn-sm" onClick={() => bulkAction("rejected")}>Reject All</button>
+            <button className="btn btn-secondary btn-sm" onClick={() => bulkAction("pending")}>Reset All</button>
+          </div>
+
+          {edits.map((edit, i) => (
+            <div key={edit.id} className={`edit-card fade-up stagger-${(i % 4) + 1} priority-${edit.priority} ${edit.status}`}>
+              <div className="edit-card-top">
+                <div className="edit-card-info">
+                  <div className="edit-card-badges">
+                    <span className={`badge badge-${edit.priority}`}>{edit.priority}</span>
+                    <span className="badge badge-category">{edit.category}</span>
+                  </div>
+                  <div className="edit-title">{edit.title}</div>
+                  <div className="edit-desc">{edit.description}</div>
+                  {edit.fix && <div className="edit-fix">→ {edit.fix}</div>}
+                  {edit.location && <div className="edit-location">📍 {edit.location}</div>}
+                </div>
+                <div className="edit-actions">
+                  <button
+                    className={`action-btn accept ${edit.status === 'accepted' ? 'active' : ''}`}
+                    onClick={() => setEditStatus(edit.id, edit.status === "accepted" ? "pending" : "accepted")}
+                    title="Accept"
+                  ><CheckIcon /></button>
+                  <button
+                    className={`action-btn reject ${edit.status === 'rejected' ? 'active' : ''}`}
+                    onClick={() => setEditStatus(edit.id, edit.status === "rejected" ? "pending" : "rejected")}
+                    title="Reject"
+                  ><XIcon /></button>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          <div className="btn-row">
+            <button className="btn btn-secondary" onClick={() => { setStep(0); setEdits([]); setScreenshots([]); setCompiledPrompt(""); }}>
+              ← Start Over
+            </button>
+            <button className="btn btn-primary" onClick={handleCompile} disabled={acceptedCount === 0}>
+              <SparkleIcon /> Compile Claude Code Prompt ({acceptedCount})
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: Compiled Prompt */}
+      {currentStep === 3 && !loading && compiledPrompt && (
+        <div className="prompt-output fade-up" style={{ marginTop: 24 }}>
+          <div className="prompt-output-header">
+            <h3>Claude Code Prompt</h3>
+            <button className="btn btn-green btn-sm" onClick={() => copyToClipboard(compiledPrompt)}>
+              <CopyIcon /> Copy to Clipboard
+            </button>
+          </div>
+          <div className="prompt-output-body">{compiledPrompt}</div>
+          <div className="btn-row" style={{ padding: "0 20px 16px" }}>
+            <button className="btn btn-secondary" onClick={() => { setStep(0); setEdits([]); setScreenshots([]); setCompiledPrompt(""); }}>
+              ← New Review
+            </button>
+          </div>
+        </div>
+      )}
+
+      <Toast message={toast.message} show={toast.show} />
+    </div>
+  );
+}
+
+ReactDOM.render(<App />, document.getElementById("root"));
+</script>
+</body>
+</html>

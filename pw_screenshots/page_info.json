@@ -1,0 +1,20 @@
+{
+  "links": [],
+  "buttons": [
+    {
+      "text": "Log out",
+      "tag": "BUTTON",
+      "id": "",
+      "classes": "home-logout"
+    }
+  ],
+  "inputs": [
+    {
+      "tag": "INPUT",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "placeholder": "What universe are we exploring today?"
+    }
+  ]
+}

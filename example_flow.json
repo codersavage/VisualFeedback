@@ -1,0 +1,30 @@
+[
+  {
+    "name": "landing_page",
+    "action": "click",
+    "selector": "text=Create account",
+    "wait": 1
+  },
+  {
+    "name": "fill_username",
+    "action": "fill",
+    "selector": "input[placeholder='username']",
+    "value": "admin"
+  },
+  {
+    "name": "fill_password",
+    "action": "fill",
+    "selector": "input[placeholder='password']",
+    "value": "admin123"
+  },
+  {
+    "name": "signup",
+    "action": "click",
+    "selector": "text=Sign up"
+  },
+  {
+    "name": "dashboard",
+    "action": "wait",
+    "selector": "input[placeholder='What universe are we exploring today?']"
+  }
+]
